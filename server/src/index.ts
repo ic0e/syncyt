@@ -8,6 +8,8 @@ interface Room {
   video: string;
   time: number;
   playing: boolean;
+  /** Wall-clock ms when time/playing was last updated — for drift correction. */
+  lastUpdatedAt: number;
 }
 
 const app = new Hono();
@@ -22,9 +24,10 @@ app.post('/create', (c) => {
   const roomId = crypto.randomUUID().slice(0, 8);
   rooms.set(roomId, {
     users: new Set(),
-    video: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', // Valid default URL structure
+    video: '',
     time: 0,
     playing: false,
+    lastUpdatedAt: Date.now(),
   });
   return c.json({ roomId });
 });
@@ -48,11 +51,17 @@ app.get(
       onOpen(_event, ws) {
         room.users.add(ws);
 
+        // Compensate for the time elapsed since the last play/seek event
+        // so the new joiner starts at the correct position.
+        const elapsed = room.playing
+          ? (Date.now() - room.lastUpdatedAt) / 1000
+          : 0;
+
         ws.send(
           JSON.stringify({
             action: 'sync',
             video: room.video,
-            time: room.time,
+            time: room.time + elapsed,
             playing: room.playing,
           })
         );
@@ -70,14 +79,18 @@ app.get(
             room.video = msg.url;
             room.time = 0;
             room.playing = false;
+            room.lastUpdatedAt = Date.now();
           } else if (msg.action === 'play') {
             if (msg.time !== undefined) room.time = msg.time;
             room.playing = true;
+            room.lastUpdatedAt = Date.now();
           } else if (msg.action === 'pause') {
             if (msg.time !== undefined) room.time = msg.time;
             room.playing = false;
+            room.lastUpdatedAt = Date.now();
           } else if (msg.action === 'seek') {
             if (msg.time !== undefined) room.time = msg.time;
+            room.lastUpdatedAt = Date.now();
           }
 
           const payload = JSON.stringify(msg);
