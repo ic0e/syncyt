@@ -8,14 +8,12 @@ interface Room {
   video: string;
   time: number;
   playing: boolean;
-  /** Wall-clock ms when time/playing was last updated — for drift correction. */
   lastUpdatedAt: number;
 }
 
 const app = new Hono();
 const { upgradeWebSocket, websocket } = createBunWebSocket();
 
-// Apply CORS globally to allow fetch requests from frontend dev servers
 app.use('*', cors());
 
 const rooms = new Map<string, Room>();
@@ -51,8 +49,6 @@ app.get(
       onOpen(_event, ws) {
         room.users.add(ws);
 
-        // Compensate for the time elapsed since the last play/seek event
-        // so the new joiner starts at the correct position.
         const elapsed = room.playing
           ? (Date.now() - room.lastUpdatedAt) / 1000
           : 0;
