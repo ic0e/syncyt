@@ -28,6 +28,8 @@ export default function App() {
   const wsRef = useRef<WebSocket | null>(null);
   const videoContainerRef = useRef<HTMLDivElement | null>(null);
   const playerRef = useRef<ReturnType<typeof videojs> | null>(null);
+  const shouldAutoPlayRef = useRef(false);
+  const shouldAutoPlayTimeRef = useRef(0);
 
   const ignoreRemoteSyncRef = useRef(false);
 
@@ -73,6 +75,23 @@ export default function App() {
     });
 
     playerRef.current = newPlayer;
+
+    // if an user joins while a video is playing, sync to it
+    newPlayer.ready(() => {
+      if (shouldAutoPlayRef.current) {
+        console.log("Auto-play triggered, waiting for video...");
+
+        // wait for the video to load, then sync to the room time
+        newPlayer.one("loadedmetadata", () => {
+          console.log("Video loaded, applying sync");
+          applyRemote({
+            action: "play",
+            time: shouldAutoPlayTimeRef.current,
+          } as WsMessage);
+          shouldAutoPlayRef.current = false;
+        });
+      }
+    });
 
     newPlayer.on("play", () => {
       wsSend({ action: "play", time: newPlayer.currentTime() ?? 0 });
@@ -154,6 +173,10 @@ export default function App() {
           if (msg.video) {
             setUrlInput(msg.video);
             setVideoUrl(msg.video);
+
+            shouldAutoPlayRef.current = msg.playing;
+            shouldAutoPlayTimeRef.current = msg.time;
+            
             setTimeout(() => {
               if (!ignoreRemoteSyncRef.current) {
                 applyRemote(msg as any);
