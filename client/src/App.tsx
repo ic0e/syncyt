@@ -3,16 +3,12 @@ import videojs from "video.js";
 import "videojs-youtube";
 import "video.js/dist/video-js.css";
 
-// helpers
-
 function getSourceType(url: string) {
   if (url.includes("youtube.com") || url.includes("youtu.be")) {
     return "video/youtube";
   }
   return "video/mp4";
 }
-
-// types
 
 type WsMessage =
   | { action: "sync"; video: string; time: number; playing: boolean }
@@ -27,121 +23,110 @@ export default function App() {
   const [inRoom, setInRoom] = useState(false);
   const [urlInput, setUrlInput] = useState("");
   const [status, setStatus] = useState("");
-
-  const [activeVideo, setActiveVideo] = useState<{
-    url: string;
-    time: number;
-    playing: boolean;
-  } | null>(null);
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
 
   const wsRef = useRef<WebSocket | null>(null);
   const videoContainerRef = useRef<HTMLDivElement | null>(null);
   const playerRef = useRef<ReturnType<typeof videojs> | null>(null);
 
-  const suppressRef = useRef(0);
+  const ignoreRemoteSyncRef = useRef(false);
 
-  // WebSocket send
   const wsSend = useCallback((msg: object) => {
     const ws = wsRef.current;
     if (ws && ws.readyState === WebSocket.OPEN) {
       ws.send(JSON.stringify(msg));
+      ignoreRemoteSyncRef.current = true;
+      setTimeout(() => {
+        ignoreRemoteSyncRef.current = false;
+      }, 500);
     }
   }, []);
 
-  // suppress helper
-  const withSuppress = useCallback((fn: () => void) => {
-    suppressRef.current += 1;
-    fn();
-    setTimeout(() => {
-      suppressRef.current = Math.max(0, suppressRef.current - 1);
-    }, 300);
-  }, []);
-
   useEffect(() => {
-    if (!inRoom || !videoContainerRef.current || !activeVideo) return;
+    if (!inRoom || !videoContainerRef.current || !videoUrl) return;
+
+    const player = playerRef.current;
+
+    if (player && !player.isDisposed()) {
+      player.src({ src: videoUrl, type: getSourceType(videoUrl) });
+      player.pause();
+      player.currentTime(0);
+      return;
+    }
 
     videoContainerRef.current.innerHTML = "";
-
     const el = document.createElement("video-js");
     el.classList.add("vjs-big-play-centered", "vjs-fluid");
     videoContainerRef.current.appendChild(el);
 
-    const { url, time, playing } = activeVideo;
-
-    const player = videojs(el, {
+    const newPlayer = videojs(el, {
       controls: true,
       autoplay: false,
       responsive: true,
       fluid: true,
       techOrder: ["youtube", "html5"],
-      sources: [{ src: url, type: getSourceType(url) }],
+      sources: [{ src: videoUrl, type: getSourceType(videoUrl) }],
       youtube: {
-        ytControls: 0, // video.js owns controls so play/pause/seeked events fire
+        ytControls: 0,
         rel: 0,
       },
     });
 
-    playerRef.current = player;
+    playerRef.current = newPlayer;
 
-    player.ready(() => {
-      withSuppress(() => {
-        player.currentTime(time);
-        if (playing) {
-          player.play()?.catch(() => null);
-        } else {
-          player.pause();
-        }
-      });
+    newPlayer.on("play", () => {
+      wsSend({ action: "play", time: newPlayer.currentTime() ?? 0 });
     });
 
-    player.on("play", () => {
-      if (suppressRef.current > 0) return;
-      wsSend({ action: "play", time: player.currentTime() ?? 0 });
+    newPlayer.on("pause", () => {
+      if (newPlayer.ended()) return;
+      wsSend({ action: "pause", time: newPlayer.currentTime() ?? 0 });
     });
 
-    player.on("pause", () => {
-      if (suppressRef.current > 0) return;
-      if (player.ended()) return;
-      wsSend({ action: "pause", time: player.currentTime() ?? 0 });
-    });
-
-    player.on("seeked", () => {
-      if (suppressRef.current > 0) return;
-      wsSend({ action: "seek", time: player.currentTime() ?? 0 });
+    newPlayer.on("seeked", () => {
+      wsSend({ action: "seek", time: newPlayer.currentTime() ?? 0 });
     });
 
     return () => {
-      if (!player.isDisposed()) player.dispose();
+      if (!newPlayer.isDisposed()) newPlayer.dispose();
       playerRef.current = null;
     };
+  }, [inRoom, videoUrl, wsSend]);
 
-  }, [inRoom, activeVideo?.url]);
+  const applyRemote = useCallback((msg: WsMessage) => {
+    const player = playerRef.current;
+    if (!player || player.isDisposed()) return;
 
-  const applyRemote = useCallback(
-    (msg: WsMessage) => {
-      const player = playerRef.current;
-      if (!player || player.isDisposed()) return;
+    const currentTime = player.currentTime() ?? 0;
+    const isPlaying = !player.paused();
 
-      withSuppress(() => {
-        if (msg.action === "play") {
-          const drift = Math.abs((player.currentTime() ?? 0) - msg.time);
-          if (drift > 1) player.currentTime(msg.time);
-          player.play()?.catch(() => null);
-          return;
-        }
-        if (msg.action === "pause") {
-          player.currentTime(msg.time);
-          player.pause();
-          return;
-        }
-        if (msg.action === "seek") {
-          player.currentTime(msg.time);
-          return;
-        }
-      });
-    },
-    [withSuppress]
-  );
+    if (msg.action === "play") {
+      if (Math.abs(currentTime - msg.time) > 2) {
+        player.currentTime(msg.time);
+      }
+      if (!isPlaying) {
+        player.play()?.catch(() => null);
+      }
+      return;
+    }
+
+    if (msg.action === "pause") {
+      if (Math.abs(currentTime - msg.time) > 1) {
+        player.currentTime(msg.time);
+      }
+      if (isPlaying) {
+        player.pause();
+      }
+      return;
+    }
+
+    if (msg.action === "seek") {
+      if (Math.abs(currentTime - msg.time) > 1.5) {
+        player.currentTime(msg.time);
+      }
+      return;
+    }
+  }, []);
 
   const connectWs = useCallback(
     (id: string) => {
@@ -168,16 +153,23 @@ export default function App() {
         if (msg.action === "sync") {
           if (msg.video) {
             setUrlInput(msg.video);
-            setActiveVideo({ url: msg.video, time: msg.time, playing: msg.playing });
+            setVideoUrl(msg.video);
+            setTimeout(() => {
+              if (!ignoreRemoteSyncRef.current) {
+                applyRemote(msg as any);
+              }
+            }, 800);
           }
           return;
         }
 
         if (msg.action === "video") {
           setUrlInput(msg.url);
-          setActiveVideo({ url: msg.url, time: 0, playing: false });
+          setVideoUrl(msg.url);
           return;
         }
+
+        if (ignoreRemoteSyncRef.current) return;
 
         applyRemote(msg);
       };
@@ -213,8 +205,8 @@ export default function App() {
   const submitVideoUrl = () => {
     const url = urlInput.trim();
     if (!url) return;
+    setVideoUrl(url);
     wsSend({ action: "video", url });
-    setActiveVideo({ url, time: 0, playing: false });
   };
 
   if (!inRoom) {
@@ -276,9 +268,9 @@ export default function App() {
         style={{ width: "1000px", height: "500px", background: "#000" }}
       />
 
-      {activeVideo && (
+      {videoUrl && (
         <p style={{ marginTop: "0.5rem", fontSize: "0.8rem", opacity: 0.5, wordBreak: "break-all" }}>
-          {activeVideo.url}
+          {videoUrl}
         </p>
       )}
     </div>
