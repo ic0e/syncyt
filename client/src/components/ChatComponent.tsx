@@ -3,7 +3,9 @@ import { useState, useEffect, useRef } from "react";
 export function Chat({ wsRef, roomId, chatMessages, setChatMessages }) {
   const [input, setInput] = useState("");
   const [username, setUsername] = useState("");
+  const [tempUsername, setTempUsername] = useState("");
   const [showNameInput, setShowNameInput] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const messagesEndRef = useRef(null);
   
 
@@ -89,6 +91,42 @@ export function Chat({ wsRef, roomId, chatMessages, setChatMessages }) {
         overflow: "hidden",
       }}
     >
+      <div style={{ padding: "0.75rem", borderTop: "1px solid #333" }}>
+        <button
+          onClick={() => setShowSettings(!showSettings)}
+          style={{ padding: "0.5rem 0.75rem", fontSize: "0.85rem" }}
+        >
+          {showSettings ? "Close" : "Settings"}
+        </button>
+      
+        {showSettings && (
+          <div style={{ marginTop: "0.5rem", padding: "0.75rem", background: "#222", borderRadius: "4px" }}>
+            <label style={{ display: "block", marginBottom: "0.5rem", fontSize: "0.9rem" }}>
+              Username
+            </label>
+            <input
+              value={tempUsername}
+              onChange={(e) => setTempUsername(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  handleSetUsername(tempUsername);
+                  setShowSettings(false);
+                }
+              }}
+              style={{ padding: "0.5rem", width: "100%", marginBottom: "0.5rem" }}
+            />
+            <button
+              onClick={() => {
+                handleSetUsername(tempUsername);
+                setShowSettings(false);
+              }}
+              style={{ padding: "0.5rem 1rem", width: "100%" }}
+            >
+              Save
+            </button>
+          </div>
+        )}
+      </div>
       {/* Messages area */}
       <div
         style={{
