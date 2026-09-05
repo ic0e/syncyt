@@ -87,6 +87,12 @@ app.get(
           } else if (msg.action === 'seek') {
             if (msg.time !== undefined) room.time = msg.time;
             room.lastUpdatedAt = Date.now();
+          } else if (msg.action === 'chat') {
+            const payload = JSON.stringify(msg);
+            for (const user of room.users) {
+              user.send(payload);
+            }
+            return;
           }
 
           const payload = JSON.stringify(msg);

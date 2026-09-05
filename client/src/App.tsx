@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import { Chat } from "./components/ChatComponent";
 import videojs from "video.js";
 import "videojs-youtube";
 import "video.js/dist/video-js.css";
@@ -16,7 +17,8 @@ type WsMessage =
   | { action: "play"; time: number }
   | { action: "pause"; time: number }
   | { action: "seek"; time: number }
-  | { action: "error"; error: string };
+  | { action: "error"; error: string }
+  | { action: "chat"; error: string };
 
 export default function App() {
   const [roomId, setRoomId] = useState("");
@@ -24,6 +26,7 @@ export default function App() {
   const [urlInput, setUrlInput] = useState("");
   const [status, setStatus] = useState("");
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [chatMessages, setChatMessages] = useState([]);
 
   const wsRef = useRef<WebSocket | null>(null);
   const videoContainerRef = useRef<HTMLDivElement | null>(null);
@@ -192,6 +195,11 @@ export default function App() {
           return;
         }
 
+        if (msg.action === "chat") {
+          setChatMessages((prev) => [...prev, msg]);
+          return;
+        }
+
         if (ignoreRemoteSyncRef.current) return;
 
         applyRemote(msg);
@@ -296,6 +304,12 @@ export default function App() {
           {videoUrl}
         </p>
       )}
+      <Chat 
+        wsRef={wsRef} 
+        roomId={roomId} 
+        chatMessages={chatMessages}
+        setChatMessages={setChatMessages}
+      />
     </div>
   );
 }
