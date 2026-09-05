@@ -20,7 +20,7 @@ export function Chat({ wsRef, roomId, chatMessages, setChatMessages }) {
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [chatMessages]);
+  }, [chatMessages, setUsername, []]);
 
   const sendMessage = () => {
     const text = input.trim();
