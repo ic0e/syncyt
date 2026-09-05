@@ -9,6 +9,8 @@ interface Room {
   time: number;
   playing: boolean;
   lastUpdatedAt: number;
+  messages: Array<{ username: string; message: string; timestamp: number }>;
+  messagesSize: number;
 }
 
 const app = new Hono();
@@ -26,6 +28,8 @@ app.post('/create', (c) => {
     time: 0,
     playing: false,
     lastUpdatedAt: Date.now(),
+    messages: [],
+    messagesSize: 0,
   });
   return c.json({ roomId });
 });
@@ -53,6 +57,7 @@ app.get(
           ? (Date.now() - room.lastUpdatedAt) / 1000
           : 0;
 
+        // sync video state on join
         ws.send(
           JSON.stringify({
             action: 'sync',
@@ -61,6 +66,14 @@ app.get(
             playing: room.playing,
           })
         );
+
+        // sync chat history on join
+        ws.send(
+            JSON.stringify({
+              action: 'chat_history',
+              messages: room.messages,
+            })
+          );
       },
 
       onMessage(event, ws) {
@@ -88,7 +101,20 @@ app.get(
             if (msg.time !== undefined) room.time = msg.time;
             room.lastUpdatedAt = Date.now();
           } else if (msg.action === 'chat') {
-            const payload = JSON.stringify(msg);
+            console.log("chat message sent");
+            
+            const messageObj = {
+              action: "chat",
+              username: msg.username,
+              message: msg.message,
+              timestamp: msg.timestamp
+            }
+
+            const messageSize = JSON.stringify(messageObj).length;
+            room.messages.push(messageObj);
+            room.messagesSize += messageSize;
+            
+            const payload = JSON.stringify(messageObj);
             for (const user of room.users) {
               user.send(payload);
             }

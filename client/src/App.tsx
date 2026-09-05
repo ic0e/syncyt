@@ -18,7 +18,8 @@ type WsMessage =
   | { action: "pause"; time: number }
   | { action: "seek"; time: number }
   | { action: "error"; error: string }
-  | { action: "chat"; error: string };
+  | { action: "chat"; message: string; username: string; timestamp: number }
+  | { action: "chat_history"; messages: Array<{ action: string; username: string; message: string; timestamp: number }> }
 
 export default function App() {
   const [roomId, setRoomId] = useState("");
@@ -186,6 +187,11 @@ export default function App() {
               }
             }, 800);
           }
+          return;
+        }
+
+        if (msg.action === "chat_history") {
+          setChatMessages(msg.messages);
           return;
         }
 
