@@ -226,6 +226,7 @@ export default function App() {
       setRoomId(newId);
       setInRoom(true);
       connectWs(newId);
+      window.history.pushState(null, '', `/${newId}`);
     } catch (err) {
       console.error(err);
       setStatus("Failed to create room");
@@ -237,6 +238,7 @@ export default function App() {
     if (!id) return;
     setInRoom(true);
     connectWs(id);
+    window.history.pushState(null, '', `/${id}`);
   };
 
   const submitVideoUrl = () => {
