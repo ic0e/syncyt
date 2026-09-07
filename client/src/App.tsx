@@ -248,16 +248,14 @@ export default function App() {
     wsSend({ action: "video", url });
   };
 
-  useEffect(() => {
+
+  if (!inRoom) {
     const urlRoomId = window.location.pathname.substring(1);
     if (urlRoomId) {
       setRoomId(urlRoomId);
       setInRoom(true);
       connectWs(urlRoomId);
     }
-  }, []);
-
-  if (!inRoom) {
     return (
       <div className="flex min-h-screen w-full items-center justify-center bg-zinc-950 p-4 text-zinc-100">
         <div className="w-full max-w-sm rounded-xl border border-zinc-800 bg-zinc-900 p-6 shadow-xl">
