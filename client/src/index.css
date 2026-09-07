@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+.vjs-controls-disabled .vjs-control-bar {
+  display: none;
+}
+
 :root {
   --bg: #ffffff;
   --text: #111827;

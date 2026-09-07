@@ -67,34 +67,36 @@ export default function App() {
 
     const newPlayer = videojs(el, {
       controls: true,
-      autoplay: false,
+      autoplay: true,
       responsive: true,
       fluid: true,
       techOrder: ["youtube", "html5"],
       sources: [{ src: videoUrl, type: getSourceType(videoUrl) }],
       youtube: {
-        ytControls: 0,
+        ytControls: 1,
         rel: 0,
       },
     });
 
+    el.classList.add('vjs-controls-disabled');
+
     playerRef.current = newPlayer;
 
-    // if an user joins while a video is playing, sync to it
+    // if a user joins while a video is playing, sync to it
+    shouldAutoPlayRef.current = true;
+    
     newPlayer.ready(() => {
-      if (shouldAutoPlayRef.current) {
-        console.log("Auto-play triggered, waiting for video...");
-
-        // wait for the video to load, then sync to the room time
-        newPlayer.one("loadedmetadata", () => {
-          console.log("Video loaded, applying sync");
-          applyRemote({
-            action: "play",
-            time: shouldAutoPlayTimeRef.current,
-          } as WsMessage);
+      newPlayer.muted(true);
+      newPlayer.play()?.catch(() => null);
+    
+      newPlayer.one("playing", () => {
+        console.log("Video loading, seeking to", shouldAutoPlayTimeRef.current);
+        if (shouldAutoPlayRef.current) {
+          newPlayer.currentTime(shouldAutoPlayTimeRef.current);
           shouldAutoPlayRef.current = false;
-        });
-      }
+        }
+        newPlayer.muted(false);
+      });
     });
 
     newPlayer.on("play", () => {
