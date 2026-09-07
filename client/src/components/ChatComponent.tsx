@@ -80,8 +80,8 @@ export function Chat({ wsRef, roomId, chatMessages, setChatMessages }) {
   }
 
   return (
-    <div className="mt-4 flex h-[300px] w-full flex-col overflow-hidden rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-200 text-sm font-normal">
-      {/* Settings Header */}
+    <div className="mt-4 flex w-full flex-col overflow-hidden rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-200 text-sm font-normal h-[600px]">
+      {/* SETTINGS HEADER */}
       <div className="border-b border-zinc-800 p-3 bg-zinc-900/50">
         <button
           onClick={() => setShowSettings(!showSettings)}
@@ -119,8 +119,8 @@ export function Chat({ wsRef, roomId, chatMessages, setChatMessages }) {
           </div>
         )}
       </div>
-
-      <div className="flex-1 overflow-y-auto p-3 space-y-2 scrollbar-thin scrollbar-thumb-zinc-800">
+      {/* CHAT MESSAGES */}
+      <div className="overflow-y-auto p-3 space-y-2 scrollbar-thin scrollbar-thumb-zinc-800 flex-1">
         {chatMessages.length === 0 ? (
           <p className="text-xs text-zinc-500 italic">No messages yet</p>
         ) : (
@@ -135,7 +135,8 @@ export function Chat({ wsRef, roomId, chatMessages, setChatMessages }) {
         )}
         <div ref={messagesEndRef} />
       </div>
-    
+
+      {/* TEXT BOX */}
       <div className="border-t border-zinc-800 bg-zinc-900/50 p-3">
         <div className="flex gap-2 mb-2">
           <input
