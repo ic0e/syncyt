@@ -246,12 +246,22 @@ export default function App() {
     wsSend({ action: "video", url });
   };
 
+  useEffect(() => {
+    const urlRoomId = window.location.pathname.substring(1);
+    if (urlRoomId) {
+      setRoomId(urlRoomId);
+      setInRoom(true);
+      connectWs(urlRoomId);
+    }
+  }, []);
+
   if (!inRoom) {
     return (
       <div className="flex min-h-screen w-full items-center justify-center bg-zinc-950 p-4 text-zinc-100">
         <div className="w-full max-w-sm rounded-xl border border-zinc-800 bg-zinc-900 p-6 shadow-xl">
-          <h1 className="mb-6 text-center text-xl font-semibold tracking-tight text-zinc-100">
-            SyncTube
+          <h1 className="mb-3 text-center text-xl font-semibold tracking-tight text-zinc-100">
+            sync-yt
+            <h3 className="text-xs text-center text-zinc-400">Watch YouTube videos with friends.</h3>
           </h1>
   
           <div className="space-y-3">
