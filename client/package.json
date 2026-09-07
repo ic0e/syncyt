@@ -10,10 +10,12 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@tailwindcss/vite": "^4.3.3",
     "@videojs/react": "^10.0.0-beta.32",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-player": "^3.4.0",
+    "tailwindcss": "^4.3.3",
     "video.js": "^8.24.0",
     "videojs-youtube": "^3.0.1"
   },
