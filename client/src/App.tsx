@@ -248,74 +248,114 @@ export default function App() {
 
   if (!inRoom) {
     return (
-      <div style={{ padding: "2rem", maxWidth: 480, margin: "0 auto" }}>
-        <h1 style={{ marginBottom: "1.5rem" }}>SyncTube</h1>
-
-        <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.75rem" }}>
-          <input
-            id="room-id-input"
-            placeholder="Room ID"
-            value={roomId}
-            onChange={(e) => setRoomId(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && joinRoom()}
-            style={{ flex: 1, padding: "0.5rem 0.75rem", fontSize: "1rem" }}
-          />
-          <button id="join-btn" onClick={joinRoom} style={{ padding: "0.5rem 1rem" }}>
-            Join
-          </button>
+      <div className="flex min-h-screen w-full items-center justify-center bg-zinc-950 p-4 text-zinc-100">
+        <div className="w-full max-w-sm rounded-xl border border-zinc-800 bg-zinc-900 p-6 shadow-xl">
+          <h1 className="mb-6 text-center text-xl font-semibold tracking-tight text-zinc-100">
+            SyncTube
+          </h1>
+  
+          <div className="space-y-3">
+            <div className="flex gap-2">
+              <input
+                id="room-id-input"
+                placeholder="Enter Room ID"
+                value={roomId}
+                onChange={(e) => setRoomId(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && joinRoom()}
+                className="w-full rounded-md border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 focus:border-zinc-600 focus:outline-none focus:ring-1 focus:ring-zinc-600 transition-colors"
+              />
+              <button
+                id="join-btn"
+                onClick={joinRoom}
+                className="rounded-md bg-zinc-800 px-4 py-2 text-sm font-medium text-zinc-200 hover:bg-zinc-700 hover:text-white transition-colors focus:outline-none focus:ring-1 focus:ring-zinc-600"
+              >
+                Join
+              </button>
+            </div>
+  
+            <button
+              id="create-btn"
+              onClick={createRoom}
+              className="w-full rounded-md bg-zinc-800 px-4 py-2 text-sm font-medium text-zinc-200 hover:bg-zinc-700 hover:text-white transition-colors focus:outline-none focus:ring-1 focus:ring-zinc-600"
+            >
+              Create Room
+            </button>
+          </div>
+  
+          {status && (
+            <p className="mt-4 text-center text-xs font-medium text-red-400">
+              {status}
+            </p>
+          )}
         </div>
-
-        <button id="create-btn" onClick={createRoom} style={{ padding: "0.5rem 1rem" }}>
-          Create Room
-        </button>
-
-        {status && <p style={{ marginTop: "1rem", color: "red" }}>{status}</p>}
       </div>
     );
   }
-
+  
   return (
-    <div style={{ padding: "1rem", maxWidth: 900, margin: "0 auto" }}>
-      <h2 style={{ marginBottom: "0.75rem" }}>
-        Room: <code>{roomId}</code>
-        {status && (
-          <span style={{ marginLeft: "1rem", fontSize: "0.85rem", opacity: 0.6 }}>
-            {status}
-          </span>
-        )}
-      </h2>
+    <div className="min-h-screen bg-zinc-950 p-4 lg:p-6 text-zinc-100">
+      <div className="mx-auto max-w-[1600px]">
+        <div className="mb-4 flex items-center justify-between border-b border-zinc-800/80 pb-3">
+          <div className="flex items-center gap-3">
+            <h2 className="text-base font-medium text-zinc-300">
+              Room:{" "}
+              <code className="rounded bg-zinc-900 px-2 py-0.5 font-mono text-sm font-semibold text-zinc-100 border border-zinc-800">
+                {roomId}
+              </code>
+            </h2>
+            {status && (
+              <span className="text-xs text-zinc-500 font-normal">
+                {status}
+              </span>
+            )}
+          </div>
+        </div>
 
-      <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1rem" }}>
-        <input
-          id="video-url-input"
-          placeholder="Paste a YouTube URL or direct video link..."
-          value={urlInput}
-          onChange={(e) => setUrlInput(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && submitVideoUrl()}
-          style={{ flex: 1, padding: "0.5rem 0.75rem", fontSize: "1rem" }}
-        />
-        <button id="load-btn" onClick={submitVideoUrl} style={{ padding: "0.5rem 1rem" }}>
-          Load
-        </button>
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-10">
+          <div className="flex flex-col lg:col-span-7">
+            <div className="mb-3 flex gap-2">
+              <input
+                id="video-url-input"
+                placeholder="Paste YouTube URL or direct video link..."
+                value={urlInput}
+                onChange={(e) => setUrlInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && submitVideoUrl()}
+                className="flex-1 rounded-md border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs text-zinc-100 placeholder-zinc-500 focus:border-zinc-600 focus:outline-none focus:ring-1 focus:ring-zinc-600 transition-colors"
+              />
+              <button
+                id="load-btn"
+                onClick={submitVideoUrl}
+                className="rounded-md bg-zinc-800 px-4 py-2 text-xs font-medium text-zinc-200 hover:bg-zinc-700 hover:text-white transition-colors focus:outline-none focus:ring-1 focus:ring-zinc-600"
+              >
+                Load
+              </button>
+            </div>
+  
+            <div className="relative aspect-video w-full overflow-hidden rounded-lg border border-zinc-800 bg-black">
+              <div
+                id="player-container"
+                ref={videoContainerRef}
+                className="h-full w-full"
+              />
+            </div>
+  
+            {videoUrl && (
+              <p className="mt-2 text-[11px] text-zinc-500 break-all font-mono">
+                {videoUrl}
+              </p>
+            )}
+          </div>
+
+          <div className="flex flex-col lg:col-span-3">
+            <Chat
+              wsRef={wsRef}
+              roomId={roomId}
+              chatMessages={chatMessages}
+              setChatMessages={setChatMessages}
+            />
+          </div>
+        </div>
       </div>
-
-      <div
-        id="player-container"
-        ref={videoContainerRef}
-        style={{ width: "1000px", height: "500px", background: "#000" }}
-      />
-
-      {videoUrl && (
-        <p style={{ marginTop: "0.5rem", fontSize: "0.8rem", opacity: 0.5, wordBreak: "break-all" }}>
-          {videoUrl}
-        </p>
-      )}
-      <Chat 
-        wsRef={wsRef} 
-        roomId={roomId} 
-        chatMessages={chatMessages}
-        setChatMessages={setChatMessages}
-      />
     </div>
-  );
+  )
 }
