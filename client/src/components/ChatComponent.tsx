@@ -80,31 +80,23 @@ export function Chat({ wsRef, roomId, chatMessages, setChatMessages }) {
   }
 
   return (
-    <div
-      style={{
-        marginTop: "1rem",
-        display: "flex",
-        flexDirection: "column",
-        height: "300px",
-        background: "#1a1a1a",
-        borderRadius: "4px",
-        overflow: "hidden",
-      }}
-    >
-      <div style={{ padding: "0.75rem", borderTop: "1px solid #333" }}>
+    <div className="mt-4 flex h-[300px] w-full flex-col overflow-hidden rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-200 text-sm font-normal">
+      {/* Settings Header */}
+      <div className="border-b border-zinc-800 p-3 bg-zinc-900/50">
         <button
           onClick={() => setShowSettings(!showSettings)}
-          style={{ padding: "0.5rem 0.75rem", fontSize: "0.85rem" }}
+          className="inline-flex items-center rounded-md bg-zinc-800 px-3 py-1.5 text-xs font-medium text-zinc-300 hover:bg-zinc-700 hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-600"
         >
-          {showSettings ? "Close" : "Settings"}
+          {showSettings ? "Close Settings" : "Settings"}
         </button>
-      
+    
         {showSettings && (
-          <div style={{ marginTop: "0.5rem", padding: "0.75rem", background: "#222", borderRadius: "4px" }}>
-            <label style={{ display: "block", marginBottom: "0.5rem", fontSize: "0.9rem" }}>
+          <div className="mt-2.5 rounded-md border border-zinc-800 bg-zinc-950 p-3 space-y-2">
+            <label className="block text-xs font-medium text-zinc-400">
               Username
             </label>
             <input
+              type="text"
               value={tempUsername}
               onChange={(e) => setTempUsername(e.target.value)}
               onKeyDown={(e) => {
@@ -113,60 +105,55 @@ export function Chat({ wsRef, roomId, chatMessages, setChatMessages }) {
                   setShowSettings(false);
                 }
               }}
-              style={{ padding: "0.5rem", width: "100%", marginBottom: "0.5rem" }}
+              className="w-full rounded bg-zinc-900 border border-zinc-800 px-2.5 py-1.5 text-xs text-zinc-100 placeholder-zinc-500 focus:border-zinc-600 focus:outline-none focus:ring-1 focus:ring-zinc-600 transition-colors"
             />
             <button
               onClick={() => {
                 handleSetUsername(tempUsername);
                 setShowSettings(false);
               }}
-              style={{ padding: "0.5rem 1rem", width: "100%" }}
+              className="w-full rounded bg-zinc-800 px-3 py-1.5 text-xs font-medium text-zinc-200 hover:bg-zinc-700 hover:text-white transition-colors focus:outline-none focus:ring-1 focus:ring-zinc-600"
             >
               Save
             </button>
           </div>
         )}
       </div>
-      {/* Messages area */}
-      <div
-        style={{
-          flex: 1,
-          overflowY: "auto",
-          padding: "1rem",
-          fontSize: "0.9rem",
-        }}
-      >
+
+      <div className="flex-1 overflow-y-auto p-3 space-y-2 scrollbar-thin scrollbar-thumb-zinc-800">
         {chatMessages.length === 0 ? (
-          <p style={{ opacity: 0.5 }}>No messages yet</p>
+          <p className="text-xs text-zinc-500 italic">No messages yet</p>
         ) : (
           chatMessages.map((msg, i) => (
-            <div key={i} style={{ marginBottom: "0.5rem" }}>
-              <span style={{ color: "#888", fontWeight: "bold" }}>
+            <div key={i} className="leading-snug break-words">
+              <span className="font-semibold text-zinc-400 mr-1.5">
                 {msg.username}:
-              </span>{" "}
-              <span>{msg.message}</span>
+              </span>
+              <span className="text-zinc-200">{msg.message}</span>
             </div>
           ))
         )}
         <div ref={messagesEndRef} />
       </div>
-
-      {/* Input area */}
-      <div style={{ padding: "0.75rem", borderTop: "1px solid #333" }}>
-        <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.5rem" }}>
+    
+      <div className="border-t border-zinc-800 bg-zinc-900/50 p-3">
+        <div className="flex gap-2 mb-2">
           <input
             placeholder="Type a message..."
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-            style={{ flex: 1, padding: "0.5rem", fontSize: "0.9rem" }}
+            className="flex-1 rounded bg-zinc-950 border border-zinc-800 px-3 py-1.5 text-xs text-zinc-100 placeholder-zinc-500 focus:border-zinc-600 focus:outline-none focus:ring-1 focus:ring-zinc-600 transition-colors"
           />
-          <button onClick={sendMessage} style={{ padding: "0.5rem 1rem" }}>
+          <button
+            onClick={sendMessage}
+            className="rounded bg-zinc-800 px-3 py-1.5 text-xs font-medium text-zinc-200 hover:bg-zinc-700 hover:text-white transition-colors focus:outline-none focus:ring-1 focus:ring-zinc-600"
+          >
             Send
           </button>
         </div>
-        <p style={{ fontSize: "0.75rem", opacity: 0.5 }}>
-          Logged in as: <strong>{username}</strong>
+        <p className="text-[11px] text-zinc-500">
+          Logged in as: <strong className="text-zinc-400 font-medium">{username}</strong>
         </p>
       </div>
     </div>
