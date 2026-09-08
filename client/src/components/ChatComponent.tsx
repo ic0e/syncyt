@@ -4,7 +4,6 @@ export function Chat({ wsRef, roomId, chatMessages, setChatMessages }) {
   const [input, setInput] = useState("");
   const [username, setUsername] = useState("");
   const [tempUsername, setTempUsername] = useState("");
-  const [showNameInput, setShowNameInput] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const messagesEndRef = useRef(null);
   
@@ -14,9 +13,20 @@ export function Chat({ wsRef, roomId, chatMessages, setChatMessages }) {
     if (saved) {
       setUsername(saved);
     } else {
-      setShowNameInput(true);
+      setUsername(genRandomUser())
     }
   }, []);
+
+  const genRandomUser = () => {
+    const adjectives = ['Swift', 'Clever', 'Cosmic', 'Hyper', 'Mystic', 'Silent', 'Golden', 'Radiant', 'Magical'];
+    const nouns = ['Fox', 'Ninja', 'Panda', 'Coder', 'Voyager', 'Falcon', 'Orbit', 'Phoenix', 'Katya', 'Anche'];
+    
+    const randomAdjective = adjectives[Math.floor(Math.random() * adjectives.length)];
+    const randomNoun = nouns[Math.floor(Math.random() * nouns.length)];
+    const randomNumber = Math.floor(Math.random() * 90) + 10;
+    
+    return `${randomAdjective}${randomNoun}${randomNumber}`;
+  }
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -44,39 +54,10 @@ export function Chat({ wsRef, roomId, chatMessages, setChatMessages }) {
     if (trimmed) {
       setUsername(trimmed);
       localStorage.setItem("syncyt_username", trimmed);
-      setShowNameInput(false);
     }
   };
-  if (showNameInput && !username) {
-    return (
-      <div
-        style={{
-          marginTop: "1rem",
-          padding: "1rem",
-          background: "#1a1a1a",
-          borderRadius: "4px",
-        }}
-      >
-        <input
-          placeholder="Enter your name..."
-          defaultValue={username}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              handleSetUsername(e.currentTarget.value);
-            }
-          }}
-          style={{ padding: "0.5rem", width: "100%", marginBottom: "0.5rem" }}
-        />
-        <button
-          onClick={(e) =>
-            handleSetUsername((e.currentTarget.previousElementSibling as HTMLInputElement).value)
-          }
-          style={{ padding: "0.5rem 1rem", width: "100%" }}
-        >
-          Set Name
-        </button>
-      </div>
-    );
+  if (!username) {
+    setUsername(genRandomUser());
   }
 
   return (
