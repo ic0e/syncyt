@@ -7,7 +7,7 @@ export function Chat({ wsRef, roomId, chatMessages, setChatMessages }: any) {
   const [tempPfpUrl, setTempPfpUrl] = useState("");
   const [profilePictureUrl, setProfilePictureUrl] = useState("");
   const [showSettings, setShowSettings] = useState(false);
-  const messagesEndRef = useRef(null);
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
   // placeholder default profile picture
   const defaultPfp = "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/2c/Default_pfp.svg/1280px-Default_pfp.svg.png?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=thumbnail";
@@ -43,8 +43,8 @@ export function Chat({ wsRef, roomId, chatMessages, setChatMessages }: any) {
   }
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [chatMessages, setUsername, []]);
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [chatMessages]);
 
   const sendMessage = () => {
     const text = input.trim();
