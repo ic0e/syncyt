@@ -27,7 +27,7 @@ export default function App() {
   const [urlInput, setUrlInput] = useState("");
   const [status, setStatus] = useState("");
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
-  const [chatMessages, setChatMessages] = useState([]);
+  const [chatMessages, setChatMessages] = useState<any[]>([]);
 
   const wsRef = useRef<WebSocket | null>(null);
   const videoContainerRef = useRef<HTMLDivElement | null>(null);

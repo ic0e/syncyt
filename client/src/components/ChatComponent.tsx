@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 
-export function Chat({ wsRef, roomId, chatMessages, setChatMessages }) {
+export function Chat({ wsRef, roomId, chatMessages, setChatMessages }: any) {
   const [input, setInput] = useState("");
   const [username, setUsername] = useState("");
   const [tempUsername, setTempUsername] = useState("");
