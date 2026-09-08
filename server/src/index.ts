@@ -9,7 +9,7 @@ interface Room {
   time: number;
   playing: boolean;
   lastUpdatedAt: number;
-  messages: Array<{ username: string; message: string; timestamp: number }>;
+  messages: Array<{ username: string; message: string; timestamp: number; pfp: string }>;
   messagesSize: number;
 }
 
@@ -107,7 +107,8 @@ app.get(
               action: "chat",
               username: msg.username,
               message: msg.message,
-              timestamp: msg.timestamp
+              timestamp: msg.timestamp,
+              pfp: msg.pfp,
             }
 
             const messageSize = JSON.stringify(messageObj).length;

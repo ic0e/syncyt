@@ -18,8 +18,8 @@ type WsMessage =
   | { action: "pause"; time: number }
   | { action: "seek"; time: number }
   | { action: "error"; error: string }
-  | { action: "chat"; message: string; username: string; timestamp: number }
-  | { action: "chat_history"; messages: Array<{ action: string; username: string; message: string; timestamp: number }> }
+  | { action: "chat"; message: string; username: string; timestamp: number; pfp: string; }
+  | { action: "chat_history"; messages: Array<{ action: string; username: string; message: string; timestamp: number; pfp: string; }> }
 
 export default function App() {
   const [roomId, setRoomId] = useState("");

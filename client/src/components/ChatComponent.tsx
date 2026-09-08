@@ -4,8 +4,13 @@ export function Chat({ wsRef, roomId, chatMessages, setChatMessages }) {
   const [input, setInput] = useState("");
   const [username, setUsername] = useState("");
   const [tempUsername, setTempUsername] = useState("");
+  const [tempPfpUrl, setTempPfpUrl] = useState("");
+  const [profilePictureUrl, setProfilePictureUrl] = useState("");
   const [showSettings, setShowSettings] = useState(false);
   const messagesEndRef = useRef(null);
+
+  // placeholder default profile picture
+  const defaultPfp = "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/2c/Default_pfp.svg/1280px-Default_pfp.svg.png?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=thumbnail";
   
 
   useEffect(() => {
@@ -16,6 +21,15 @@ export function Chat({ wsRef, roomId, chatMessages, setChatMessages }) {
       setUsername(genRandomUser())
     }
   }, []);
+
+  useEffect(() => {
+    const pfp = localStorage.getItem("syncyt_pfp");
+    if (pfp) {
+      setProfilePictureUrl(pfp);
+    } else {
+      setProfilePictureUrl(defaultPfp);
+    }
+  })
 
   const genRandomUser = () => {
     const adjectives = ['Swift', 'Clever', 'Cosmic', 'Hyper', 'Mystic', 'Silent', 'Golden', 'Radiant', 'Magical'];
@@ -44,6 +58,7 @@ export function Chat({ wsRef, roomId, chatMessages, setChatMessages }) {
           message: text,
           username: username,
           timestamp: Date.now(),
+          pfp: profilePictureUrl,
         }),
       );
       setInput("");
@@ -56,6 +71,15 @@ export function Chat({ wsRef, roomId, chatMessages, setChatMessages }) {
       localStorage.setItem("syncyt_username", trimmed);
     }
   };
+  
+  const handleSetPfp = (pfpUrl) => {
+    const trimmed = pfpUrl.trim();
+    if (trimmed) {
+      setProfilePictureUrl(trimmed);
+      localStorage.setItem("syncyt_pfp", trimmed);
+    }
+  };
+  
   if (!username) {
     setUsername(genRandomUser());
   }
@@ -70,27 +94,58 @@ export function Chat({ wsRef, roomId, chatMessages, setChatMessages }) {
         >
           {showSettings ? "Close Settings" : "Settings"}
         </button>
-    
+
         {showSettings && (
-          <div className="mt-2.5 rounded-md border border-zinc-800 bg-zinc-950 p-3 space-y-2">
-            <label className="block text-xs font-medium text-zinc-400">
-              Username
-            </label>
-            <input
-              type="text"
-              value={tempUsername}
-              onChange={(e) => setTempUsername(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  handleSetUsername(tempUsername);
-                  setShowSettings(false);
-                }
-              }}
-              className="w-full rounded bg-zinc-900 border border-zinc-800 px-2.5 py-1.5 text-xs text-zinc-100 placeholder-zinc-500 focus:border-zinc-600 focus:outline-none focus:ring-1 focus:ring-zinc-600 transition-colors"
-            />
+          <div className="mt-2.5 rounded-md border border-zinc-800 bg-zinc-950 p-3 space-y-3">
+            <div>
+              <label className="block text-xs font-medium text-zinc-400 mb-1">
+                Username
+              </label>
+              <input
+                type="text"
+                value={tempUsername || username}
+                onChange={(e) => setTempUsername(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    handleSetUsername(tempUsername);
+                    setShowSettings(false);
+                  }
+                }}
+                className="w-full rounded bg-zinc-900 border border-zinc-800 px-2.5 py-1.5 text-xs text-zinc-100 placeholder-zinc-500 focus:border-zinc-600 focus:outline-none focus:ring-1 focus:ring-zinc-600 transition-colors"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-zinc-400 mb-1">
+                Profile Picture URL
+              </label>
+              <input
+                type="text"
+                placeholder="https://example.com/image.png"
+                defaultValue={profilePictureUrl === defaultPfp ? "" : profilePictureUrl}
+                onChange={(e) => setTempPfpUrl(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    handleSetPfp((e.target as HTMLInputElement).value);
+                  }
+                }}
+                className="w-full rounded bg-zinc-900 border border-zinc-800 px-2.5 py-1.5 text-xs text-zinc-100 placeholder-zinc-500 focus:border-zinc-600 focus:outline-none focus:ring-1 focus:ring-zinc-600 transition-colors mb-2"
+              />
+              <div className="flex items-center gap-2 p-2 bg-zinc-900 rounded border border-zinc-800">
+                <img
+                  src={tempPfpUrl || profilePictureUrl}
+                  onError={(e) => ((e.target as HTMLInputElement).src = defaultPfp)}
+                  alt="pfp preview"
+                  className="w-8 h-8 rounded-full object-cover"
+                />
+                <span className="text-xs text-zinc-500">Preview</span>
+              </div>
+            </div>
+
             <button
               onClick={() => {
                 handleSetUsername(tempUsername);
+                handleSetPfp(tempPfpUrl);
                 setShowSettings(false);
               }}
               className="w-full rounded bg-zinc-800 px-3 py-1.5 text-xs font-medium text-zinc-200 hover:bg-zinc-700 hover:text-white transition-colors focus:outline-none focus:ring-1 focus:ring-zinc-600"
@@ -106,11 +161,19 @@ export function Chat({ wsRef, roomId, chatMessages, setChatMessages }) {
           <p className="text-xs text-zinc-500 italic">No messages yet</p>
         ) : (
           chatMessages.map((msg, i) => (
-            <div key={i} className="leading-snug break-words">
-              <span className="font-semibold text-zinc-400 mr-1.5">
-                {msg.username}:
-              </span>
-              <span className="text-zinc-200">{msg.message}</span>
+            <div key={i} className="flex gap-2 leading-snug break-words">
+              <img
+                src={msg.pfp || defaultPfp}
+                onError={(e) => ((e.target as HTMLInputElement).src = defaultPfp)}
+                alt={msg.username}
+                className="w-8 h-8 rounded-full object-cover flex-shrink-0 mt-0.5"
+              />
+              <div className="flex-1 min-w-0">
+                <span className="font-semibold text-zinc-400">
+                  {msg.username}
+                </span>
+                <p className="text-zinc-200">{msg.message}</p>
+              </div>
             </div>
           ))
         )}
