@@ -13,6 +13,30 @@ interface Room {
   messagesSize: number;
 }
 
+interface RateLimitEntry {
+  timestamps: number[];
+}
+
+const rateLimitStore = new Map<string, RateLimitEntry>();
+
+const checkRateLimit = (key: string, maxRequests: number, windowMs: number): boolean => {
+  const now = Date.now();
+  
+  if (!rateLimitStore.has(key)) {
+    rateLimitStore.set(key, { timestamps: [] });
+  }
+  
+  const entry = rateLimitStore.get(key)!;
+  entry.timestamps = entry.timestamps.filter(t => now - t < windowMs);
+  
+  if (entry.timestamps.length >= maxRequests) {
+    return false;
+  }
+  
+  entry.timestamps.push(now);
+  return true;
+};
+
 const app = new Hono();
 const { upgradeWebSocket, websocket } = createBunWebSocket();
 
@@ -21,6 +45,12 @@ app.use('*', cors());
 const rooms = new Map<string, Room>();
 
 app.post('/create', (c) => {
+  const clientIp = c.req.header('x-forwarded-for') || 'unknown';
+    
+  if (!checkRateLimit(`create:${clientIp}`, 5, 60000)) {
+    return c.json({ error: 'Too many room creations. Try again later.' }, 429);
+  }
+  
   const roomId = crypto.randomUUID().slice(0, 8);
   rooms.set(roomId, {
     users: new Set(),
@@ -101,7 +131,12 @@ app.get(
             if (msg.time !== undefined) room.time = msg.time;
             room.lastUpdatedAt = Date.now();
           } else if (msg.action === 'chat') {
-            console.log("chat message sent");
+            const clientIp = c.req.header('x-forwarded-for') || 'unknown';
+              
+              if (!checkRateLimit(`chat:${roomId}:${clientIp}`, 5, 1000)) {
+                ws.send(JSON.stringify({ error: 'Too many messages. Slow down.' }));
+                return;
+              }
             
             const messageObj = {
               action: "chat",
