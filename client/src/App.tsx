@@ -160,7 +160,7 @@ export default function App() {
 
   const connectWs = useCallback(
     (id: string) => {
-      const ws = new WebSocket(`ws://localhost:3000/ws/${id}`);
+      const ws = new WebSocket(`wss://sync-yt-backend.onrender.com/ws/${id}`);
 
       ws.onopen = () => {
         setStatus("Connected");
@@ -228,7 +228,7 @@ export default function App() {
   const createRoom = async () => {
     try {
       setStatus("Creating room...");
-      const res = await fetch("http://localhost:3000/create", { method: "POST" });
+      const res = await fetch("https://sync-yt-backend.onrender.com/create", { method: "POST" });
       const { roomId: newId } = await res.json();
       setRoomId(newId);
       setInRoom(true);
