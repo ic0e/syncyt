@@ -100,16 +100,21 @@ export default function App() {
     });
 
     newPlayer.on("play", () => {
-      wsSend({ action: "play", time: newPlayer.currentTime() ?? 0 });
+      if (newPlayer.readyState() > 0) {
+          wsSend({ action: "play", time: newPlayer.currentTime() ?? 0 });
+        }
     });
 
     newPlayer.on("pause", () => {
-      if (newPlayer.ended()) return;
-      wsSend({ action: "pause", time: newPlayer.currentTime() ?? 0 });
+      if (!newPlayer.ended() && newPlayer.readyState() > 0) {
+          wsSend({ action: "pause", time: newPlayer.currentTime() ?? 0 });
+        }
     });
 
     newPlayer.on("seeked", () => {
-      wsSend({ action: "seek", time: newPlayer.currentTime() ?? 0 });
+      if (newPlayer.readyState() > 0) {
+          wsSend({ action: "seek", time: newPlayer.currentTime() ?? 0 });
+        }
     });
 
     return () => {
