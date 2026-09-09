@@ -47,28 +47,26 @@ export function Chat({ wsRef, roomId, chatMessages, setChatMessages }: any) {
   }, [chatMessages]);
 
   const sendMessage = () => {
-    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
-        console.error('WebSocket not connected');
-        return;
-    }
-    
     const text = input.trim();
     if (!text || !username) return;
-
-    const ws = wsRef.current;
-    if (ws && ws.readyState === WebSocket.OPEN) {
-      ws.send(
-        JSON.stringify({
-          action: "chat",
-          message: text,
-          username: username,
-          timestamp: Date.now(),
-          pfp: profilePictureUrl,
-        }),
-      );
-      setInput("");
+  
+    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+      console.error('WebSocket not connected');
+      return;
     }
+  
+    wsRef.current.send(
+      JSON.stringify({
+        action: "chat",
+        message: text,
+        username: username,
+        timestamp: Date.now(),
+        pfp: profilePictureUrl,
+      }),
+    );
+    setInput("");
   };
+  
   const handleSetUsername = (name) => {
     const trimmed = name.trim();
     if (trimmed) {
