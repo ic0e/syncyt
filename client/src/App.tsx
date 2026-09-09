@@ -21,6 +21,11 @@ type WsMessage =
   | { action: "chat"; message: string; username: string; timestamp: number; pfp: string; }
   | { action: "chat_history"; messages: Array<{ action: string; username: string; message: string; timestamp: number; pfp: string; }> }
 
+  const getInitialRoomId = () => {
+    const urlRoomId = window.location.pathname.substring(1).trim();
+    return urlRoomId && urlRoomId.length > 0 ? urlRoomId : '';
+  };
+  
 export default function App() {
   const [roomId, setRoomId] = useState("");
   const [inRoom, setInRoom] = useState(false);
@@ -36,6 +41,12 @@ export default function App() {
   const shouldAutoPlayTimeRef = useRef(0);
 
   const ignoreRemoteSyncRef = useRef(false);
+  
+  useEffect(() => {
+    if (inRoom && roomId) {
+      connectWs(roomId);
+    }
+  }, [inRoom, roomId]);
 
   const wsSend = useCallback((msg: object) => {
     const ws = wsRef.current;
@@ -260,12 +271,6 @@ export default function App() {
 
 
   if (!inRoom) {
-    const urlRoomId = window.location.pathname.substring(1);
-    if (urlRoomId) {
-      setRoomId(urlRoomId);
-      setInRoom(true);
-      connectWs(urlRoomId);
-    }
     return (
       <div className="flex min-h-screen w-full items-center justify-center bg-zinc-950 p-4 text-zinc-100">
         <div className="w-full max-w-sm rounded-xl border border-zinc-800 bg-zinc-900 p-6 shadow-xl">
