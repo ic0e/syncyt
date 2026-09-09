@@ -94,6 +94,7 @@ export default function App() {
         if (shouldAutoPlayRef.current) {
           newPlayer.currentTime(shouldAutoPlayTimeRef.current);
           shouldAutoPlayRef.current = false;
+          shouldAutoPlayTimeRef.current = 0;
         }
         newPlayer.muted(false);
       });
@@ -203,6 +204,7 @@ export default function App() {
         }
 
         if (msg.action === "video") {
+          shouldAutoPlayTimeRef.current = 0;
           setUrlInput(msg.url);
           setVideoUrl(msg.url);
           return;
@@ -251,6 +253,7 @@ export default function App() {
   const submitVideoUrl = () => {
     const url = urlInput.trim();
     if (!url) return;
+    shouldAutoPlayTimeRef.current = 0;
     setVideoUrl(url);
     wsSend({ action: "video", url });
   };
