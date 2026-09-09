@@ -206,7 +206,7 @@ export default function App() {
               if (!ignoreRemoteSyncRef.current) {
                 applyRemote(msg as any);
               }
-            }, 800);
+            }, 300);
           }
           return;
         }
