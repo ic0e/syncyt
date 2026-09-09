@@ -21,11 +21,6 @@ type WsMessage =
   | { action: "chat"; message: string; username: string; timestamp: number; pfp: string; }
   | { action: "chat_history"; messages: Array<{ action: string; username: string; message: string; timestamp: number; pfp: string; }> }
 
-  const getInitialRoomId = () => {
-    const urlRoomId = window.location.pathname.substring(1).trim();
-    return urlRoomId && urlRoomId.length > 0 ? urlRoomId : '';
-  };
-  
 export default function App() {
   const [roomId, setRoomId] = useState("");
   const [inRoom, setInRoom] = useState(false);
@@ -41,12 +36,6 @@ export default function App() {
   const shouldAutoPlayTimeRef = useRef(0);
 
   const ignoreRemoteSyncRef = useRef(false);
-  
-  useEffect(() => {
-    if (inRoom && roomId) {
-      connectWs(roomId);
-    }
-  }, [inRoom, roomId]);
 
   const wsSend = useCallback((msg: object) => {
     const ws = wsRef.current;
@@ -58,6 +47,20 @@ export default function App() {
       }, 500);
     }
   }, []);
+
+  useEffect(() => {
+    const urlRoomId = window.location.pathname.substring(1).trim();
+    if (urlRoomId && !inRoom) {
+      setRoomId(urlRoomId);
+      setInRoom(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (inRoom && roomId) {
+      connectWs(roomId);
+    }
+  }, [inRoom, roomId]);
 
   useEffect(() => {
     if (!inRoom || !videoContainerRef.current || !videoUrl) return;
@@ -93,7 +96,6 @@ export default function App() {
 
     playerRef.current = newPlayer;
 
-    // if a user joins while a video is playing, sync to it
     shouldAutoPlayRef.current = true;
     
     newPlayer.ready(() => {
@@ -245,7 +247,6 @@ export default function App() {
       const { roomId: newId } = await res.json();
       setRoomId(newId);
       setInRoom(true);
-      connectWs(newId);
       window.history.pushState(null, '', `/${newId}`);
     } catch (err) {
       console.error(err);
@@ -257,7 +258,6 @@ export default function App() {
     const id = roomId.trim();
     if (!id) return;
     setInRoom(true);
-    connectWs(id);
     window.history.pushState(null, '', `/${id}`);
   };
 
