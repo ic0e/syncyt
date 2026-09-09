@@ -47,6 +47,11 @@ export function Chat({ wsRef, roomId, chatMessages, setChatMessages }: any) {
   }, [chatMessages]);
 
   const sendMessage = () => {
+    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+        console.error('WebSocket not connected');
+        return;
+    }
+    
     const text = input.trim();
     if (!text || !username) return;
 
