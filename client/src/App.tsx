@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Chat } from "./components/ChatComponent";
+import { Playlist } from "./components/Playlist";
 import videojs from "video.js";
 import "videojs-youtube";
 import "video.js/dist/video-js.css";
@@ -20,14 +21,18 @@ type WsMessage =
   | { action: "error"; error: string }
   | { action: "chat"; message: string; username: string; timestamp: number; pfp: string; }
   | { action: "chat_history"; messages: Array<{ action: string; username: string; message: string; timestamp: number; pfp: string; }> }
+  | { action: "playlist"; urls: string[]; index: number }
+  | { action: "playlist_history"; urls: string[]; index: number }
 
 export default function App() {
   const [roomId, setRoomId] = useState("");
   const [inRoom, setInRoom] = useState(false);
-  const [urlInput, setUrlInput] = useState("");
   const [status, setStatus] = useState("");
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [chatMessages, setChatMessages] = useState<any[]>([]);
+  const [playlist, setPlaylist] = useState<string[]>([]);
+  const [playlistIndex, setPlaylistIndex] = useState(0);
+  const [showPlaylist, setShowPlaylist] = useState(false);
 
   const wsRef = useRef<WebSocket | null>(null);
   const videoContainerRef = useRef<HTMLDivElement | null>(null);
@@ -37,6 +42,14 @@ export default function App() {
   const isInitializingRef = useRef(false);
 
   const ignoreRemoteSyncRef = useRef(false);
+
+  const playlistRef = useRef(playlist);
+  const playlistIndexRef = useRef(playlistIndex);
+
+  useEffect(() => {
+    playlistRef.current = playlist;
+    playlistIndexRef.current = playlistIndex;
+  }, [playlist, playlistIndex]);
 
   const wsSend = useCallback((msg: object) => {
     const ws = wsRef.current;
@@ -104,11 +117,11 @@ export default function App() {
     playerRef.current = newPlayer;
 
     shouldAutoPlayRef.current = true;
-    
+
     newPlayer.ready(() => {
       newPlayer.muted(true);
       newPlayer.play()?.catch(() => null);
-      
+
       newPlayer.one("playing", () => {
         console.log("Video loading, seeking to", shouldAutoPlayTimeRef.current);
         if (shouldAutoPlayRef.current) {
@@ -142,6 +155,17 @@ export default function App() {
       if (newPlayer.readyState() > 0) {
           wsSend({ action: "seek", time: newPlayer.currentTime() ?? 0 });
         }
+    });
+
+    newPlayer.on("ended", () => {
+      const currentPlaylist = playlistRef.current;
+      const currentIndex = playlistIndexRef.current;
+      if (currentIndex < currentPlaylist.length - 1) {
+        const nextIndex = currentIndex + 1;
+        setPlaylistIndex(nextIndex);
+        setVideoUrl(currentPlaylist[nextIndex]);
+        wsSend({ action: "playlist", urls: currentPlaylist, index: nextIndex });
+      }
     });
 
     return () => {
@@ -210,12 +234,11 @@ export default function App() {
         if (msg.action === "sync") {
           if (msg.video) {
             ignoreRemoteSyncRef.current = true;
-            setUrlInput(msg.video);
             setVideoUrl(msg.video);
 
             shouldAutoPlayRef.current = msg.playing;
             shouldAutoPlayTimeRef.current = msg.time;
-            
+
             setTimeout(() => {
               if (!ignoreRemoteSyncRef.current) {
                 applyRemote(msg as any);
@@ -230,10 +253,19 @@ export default function App() {
           return;
         }
 
-        if (msg.action === "video") {
-          shouldAutoPlayTimeRef.current = 0;
-          setUrlInput(msg.url);
-          setVideoUrl(msg.url);
+        if (msg.action === "playlist_history") {
+          setPlaylist(msg.urls);
+          setPlaylistIndex(msg.index);
+          if (msg.urls.length > 0) {
+            setVideoUrl(msg.urls[msg.index]);
+          }
+          return;
+        }
+
+        if (msg.action === "playlist") {
+          setPlaylist(msg.urls);
+          setPlaylistIndex(msg.index);
+          setVideoUrl(msg.urls[msg.index]);
           return;
         }
 
@@ -275,14 +307,44 @@ export default function App() {
     window.history.pushState(null, '', `/${id}`);
   };
 
-  const submitVideoUrl = () => {
-    const url = urlInput.trim();
-    if (!url) return;
-    shouldAutoPlayTimeRef.current = 0;
-    setVideoUrl(url);
-    wsSend({ action: "video", url });
+  const addToPlaylist = (url: string) => {
+    const newPlaylist = [...playlist, url];
+    const newIndex = playlist.length === 0 ? 0 : playlistIndex;
+    setPlaylist(newPlaylist);
+    setPlaylistIndex(newIndex);
+    if (playlist.length === 0) {
+      setVideoUrl(url);
+    }
+    wsSend({ action: "playlist", urls: newPlaylist, index: newIndex });
   };
 
+  const removeFromPlaylist = (index: number) => {
+    let newPlaylist = playlist.filter((_, i) => i !== index);
+    let newIndex = playlistIndex;
+
+    if (index < playlistIndex) {
+      newIndex = playlistIndex - 1;
+    } else if (index === playlistIndex) {
+      if (newPlaylist.length > 0) {
+        newIndex = Math.min(playlistIndex, newPlaylist.length - 1);
+        setVideoUrl(newPlaylist[newIndex]);
+      } else {
+        newPlaylist = [];
+        newIndex = 0;
+        setVideoUrl(null);
+      }
+    }
+
+    setPlaylist(newPlaylist);
+    setPlaylistIndex(newIndex);
+    wsSend({ action: "playlist", urls: newPlaylist, index: newIndex });
+  };
+
+  const playFromPlaylist = (index: number) => {
+    setPlaylistIndex(index);
+    setVideoUrl(playlist[index]);
+    wsSend({ action: "playlist", urls: playlist, index });
+  };
 
   if (!inRoom) {
     return (
@@ -292,7 +354,7 @@ export default function App() {
             sync-yt
             <h3 className="text-xs text-center text-zinc-400">Watch YouTube videos with friends.</h3>
           </h1>
-          
+
           <div className="space-y-3">
             <div className="flex gap-2">
               <input
@@ -311,7 +373,7 @@ export default function App() {
                 Join
               </button>
             </div>
-            
+
             <button
               id="create-btn"
               onClick={createRoom}
@@ -320,7 +382,7 @@ export default function App() {
               Create Room
             </button>
           </div>
-          
+
           {status && (
             <p className="mt-4 text-center text-xs font-medium text-red-400">
               {status}
@@ -330,7 +392,7 @@ export default function App() {
       </div>
     );
   }
-  
+
   return (
     <div className="min-h-screen bg-zinc-950 p-4 lg:p-6 text-zinc-100">
       <div className="mx-auto max-w-[1600px]">
@@ -353,23 +415,25 @@ export default function App() {
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-10">
           <div className="flex flex-col lg:col-span-7">
             <div className="mb-3 flex gap-2">
-              <input
-                id="video-url-input"
-                placeholder="Paste YouTube URL or direct video link..."
-                value={urlInput}
-                onChange={(e) => setUrlInput(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && submitVideoUrl()}
-                className="flex-1 rounded-md border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs text-zinc-100 placeholder-zinc-500 focus:border-zinc-600 focus:outline-none focus:ring-1 focus:ring-zinc-600 transition-colors"
+              <Playlist
+                playlist={playlist}
+                playlistIndex={playlistIndex}
+                onAddToPlaylist={addToPlaylist}
+                onRemoveFromPlaylist={removeFromPlaylist}
+                //@ts-ignore
+                onPlayFromPlaylist={playFromPlaylist}
+                showPlaylist={showPlaylist}
+                setShowPlaylist={setShowPlaylist}
               />
               <button
-                id="load-btn"
-                onClick={submitVideoUrl}
+                id="playlist-btn"
+                onClick={() => setShowPlaylist(!showPlaylist)}
                 className="rounded-md bg-zinc-800 px-4 py-2 text-xs font-medium text-zinc-200 hover:bg-zinc-700 hover:text-white transition-colors focus:outline-none focus:ring-1 focus:ring-zinc-600"
               >
-                Load
+                Queue ({playlist.length})
               </button>
             </div>
-            
+
             <div className="relative aspect-video w-full overflow-hidden rounded-lg border border-zinc-800 bg-black">
               <div
                 id="player-container"
@@ -377,7 +441,7 @@ export default function App() {
                 className="h-full w-full"
               />
             </div>
-            
+
             {videoUrl && (
               <p className="mt-2 text-[11px] text-zinc-500 break-all font-mono">
                 {videoUrl}

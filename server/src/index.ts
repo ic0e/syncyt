@@ -11,6 +11,8 @@ interface Room {
   lastUpdatedAt: number;
   messages: Array<{ username: string; message: string; timestamp: number; pfp: string }>;
   messagesSize: number;
+  playlist: string[];
+  playlistIndex: number;
 }
 
 interface RateLimitEntry {
@@ -60,6 +62,8 @@ app.post('/create', (c) => {
     lastUpdatedAt: Date.now(),
     messages: [],
     messagesSize: 0,
+    playlist: [],
+    playlistIndex: 0,
   });
   return c.json({ roomId });
 });
@@ -87,7 +91,6 @@ app.get(
           ? (Date.now() - room.lastUpdatedAt) / 1000
           : 0;
 
-        // sync video state on join
         ws.send(
           JSON.stringify({
             action: 'sync',
@@ -97,13 +100,20 @@ app.get(
           })
         );
 
-        // sync chat history on join
         ws.send(
             JSON.stringify({
               action: 'chat_history',
               messages: room.messages,
             })
           );
+
+        ws.send(
+          JSON.stringify({
+            action: 'playlist_history',
+            urls: room.playlist,
+            index: room.playlistIndex,
+          })
+        );
       },
 
       onMessage(event, ws) {
@@ -130,6 +140,20 @@ app.get(
           } else if (msg.action === 'seek') {
             if (msg.time !== undefined) room.time = msg.time;
             room.lastUpdatedAt = Date.now();
+          } else if (msg.action === 'playlist') {
+            room.playlist = msg.urls || [];
+            const newIndex = msg.index ?? 0;
+            const newVideo = room.playlist.length > 0 ? room.playlist[newIndex] : '';
+
+            if (room.video !== newVideo || room.playlistIndex !== newIndex) {
+              room.playlistIndex = newIndex;
+              room.video = newVideo;
+              room.time = 0;
+              room.playing = false;
+              room.lastUpdatedAt = Date.now();
+            } else {
+              room.playlistIndex = newIndex;
+            }
           } else if (msg.action === 'chat') {
             const clientIp = c.req.header('x-forwarded-for') || 'unknown';
               
