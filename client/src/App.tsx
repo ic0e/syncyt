@@ -34,6 +34,7 @@ export default function App() {
   const playerRef = useRef<ReturnType<typeof videojs> | null>(null);
   const shouldAutoPlayRef = useRef(false);
   const shouldAutoPlayTimeRef = useRef(0);
+  const isInitializingRef = useRef(false);
 
   const ignoreRemoteSyncRef = useRef(false);
 
@@ -68,11 +69,17 @@ export default function App() {
     const player = playerRef.current;
 
     if (player && !player.isDisposed()) {
+      isInitializingRef.current = true;
       player.src({ src: videoUrl, type: getSourceType(videoUrl) });
       player.pause();
       player.currentTime(0);
+      setTimeout(() => {
+        isInitializingRef.current = false;
+      }, 500);
       return;
     }
+
+    isInitializingRef.current = true;
 
     videoContainerRef.current.innerHTML = "";
     const el = document.createElement("video-js");
@@ -101,7 +108,7 @@ export default function App() {
     newPlayer.ready(() => {
       newPlayer.muted(true);
       newPlayer.play()?.catch(() => null);
-    
+      
       newPlayer.one("playing", () => {
         console.log("Video loading, seeking to", shouldAutoPlayTimeRef.current);
         if (shouldAutoPlayRef.current) {
@@ -110,22 +117,28 @@ export default function App() {
           shouldAutoPlayTimeRef.current = 0;
         }
         newPlayer.muted(false);
+        setTimeout(() => {
+          isInitializingRef.current = false;
+        }, 500);
       });
     });
 
     newPlayer.on("play", () => {
+      if (isInitializingRef.current) return;
       if (newPlayer.readyState() > 0) {
           wsSend({ action: "play", time: newPlayer.currentTime() ?? 0 });
         }
     });
 
     newPlayer.on("pause", () => {
+      if (isInitializingRef.current) return;
       if (!newPlayer.ended() && newPlayer.readyState() > 0) {
           wsSend({ action: "pause", time: newPlayer.currentTime() ?? 0 });
         }
     });
 
     newPlayer.on("seeked", () => {
+      if (isInitializingRef.current) return;
       if (newPlayer.readyState() > 0) {
           wsSend({ action: "seek", time: newPlayer.currentTime() ?? 0 });
         }
@@ -196,6 +209,7 @@ export default function App() {
 
         if (msg.action === "sync") {
           if (msg.video) {
+            ignoreRemoteSyncRef.current = true;
             setUrlInput(msg.video);
             setVideoUrl(msg.video);
 
@@ -278,7 +292,7 @@ export default function App() {
             sync-yt
             <h3 className="text-xs text-center text-zinc-400">Watch YouTube videos with friends.</h3>
           </h1>
-  
+          
           <div className="space-y-3">
             <div className="flex gap-2">
               <input
@@ -297,7 +311,7 @@ export default function App() {
                 Join
               </button>
             </div>
-  
+            
             <button
               id="create-btn"
               onClick={createRoom}
@@ -306,7 +320,7 @@ export default function App() {
               Create Room
             </button>
           </div>
-  
+          
           {status && (
             <p className="mt-4 text-center text-xs font-medium text-red-400">
               {status}
@@ -355,7 +369,7 @@ export default function App() {
                 Load
               </button>
             </div>
-  
+            
             <div className="relative aspect-video w-full overflow-hidden rounded-lg border border-zinc-800 bg-black">
               <div
                 id="player-container"
@@ -363,7 +377,7 @@ export default function App() {
                 className="h-full w-full"
               />
             </div>
-  
+            
             {videoUrl && (
               <p className="mt-2 text-[11px] text-zinc-500 break-all font-mono">
                 {videoUrl}
